@@ -11,7 +11,7 @@ on:
 
 jobs:
   renovate:
-    runs-on: ubuntu-latest
+    runs-on: codeberg-tiny
 
     steps:
       # --------------------------------------------------------------
