@@ -1,0 +1,63 @@
+# .forgejo/workflows/renovate.yml
+name: Renovate
+
+# Trigger the job
+on:
+  # Run on a regular schedule (daily at 02:00 UTC). Adjust the cron if you prefer another cadence.
+  schedule:
+    - cron: '0 2 * * *'
+  # Optionally allow manual runs via the UI
+  push:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    runs-on: docker
+
+    steps:
+      # --------------------------------------------------------------
+      # 1️⃣ Check out the repository so Renovate can read the manifests
+      # --------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------------------
+      # 2️⃣ Pull the official Renovate Docker image
+      # --------------------------------------------------------------
+      - name: Pull Renovate image
+        run: |
+          docker pull renovate/renovate:latest
+
+      # --------------------------------------------------------------
+      # 3️⃣ Run Renovate
+      # --------------------------------------------------------------
+      # • RENOVATE_TOKEN – a personal access token with write permission
+      #   (store it as a secret named RENOVATE_TOKEN in your repo settings)
+      # • RENOVATE_PLATFORM – tells Renovate we’re on Forgejo
+      # • RENOVATE_ENDPOINT – base URL of your Forgejo instance (no trailing slash)
+      # • Additional config can be supplied via a `renovate.json` file in the repo
+      - name: Execute Renovate
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_PLATFORM: forgejo
+          RENOVATE_ENDPOINT: https://codeberg.org/davidbelich/central-mirror   # ← replace with your Forgejo host
+        run: |
+          docker run --rm \
+            -e LOG_LEVEL=debug \
+            -e RENOVATE_TOKEN="${RENOVATE_TOKEN}" \
+            -e RENOVATE_PLATFORM="${RENOVATE_PLATFORM}" \
+            -e RENOVATE_ENDPOINT="${RENOVATE_ENDPOINT}" \
+            -v "${PWD}:/repo" \
+            renovate/renovate:latest \
+            /repo
+
+      # --------------------------------------------------------------
+      # 4️⃣ (Optional) Save Renovate logs for troubleshooting
+      # --------------------------------------------------------------
+      - name: Archive Renovate log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renovate-log
+          path: /tmp/renovate.log
